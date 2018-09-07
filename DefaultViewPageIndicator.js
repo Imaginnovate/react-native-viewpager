@@ -1,7 +1,8 @@
 'use strict';
-
+import PropTypes from 'prop-types';
 var React = require('react');
 var ReactNative = require('react-native');
+var createReactClass = require('create-react-class');
 var {
   Dimensions,
   StyleSheet,
@@ -12,8 +13,8 @@ var {
 } = ReactNative;
 
 var deviceWidth = Dimensions.get('window').width;
-var DOT_SIZE = 6;
-var DOT_SAPCE = 4;
+var DOT_SIZE = 12;
+var DOT_SAPCE = 10;
 
 var styles = StyleSheet.create({
   tab: {
@@ -30,27 +31,28 @@ var styles = StyleSheet.create({
     width: DOT_SIZE,
     height: DOT_SIZE,
     borderRadius: DOT_SIZE / 2,
-    backgroundColor: '#E0E1E2',
+    borderColor:'white',
+    borderWidth:1.5,
+    backgroundColor: 'transparent',
     marginLeft: DOT_SAPCE,
     marginRight: DOT_SAPCE,
   },
 
   curDot: {
-    position: 'absolute',
     width: DOT_SIZE,
     height: DOT_SIZE,
     borderRadius: DOT_SIZE / 2,
-    backgroundColor: '#80ACD0',
-    margin: DOT_SAPCE,
-    bottom: 0,
+    backgroundColor: 'white',
+    marginLeft: DOT_SAPCE,
+    marginRight: DOT_SAPCE,
   },
 });
 
-var DefaultViewPageIndicator = React.createClass({
+var DefaultViewPageIndicator = createReactClass({
   propTypes: {
-    goToPage: React.PropTypes.func,
-    activePage: React.PropTypes.number,
-    pageCount: React.PropTypes.number
+    goToPage: PropTypes.func,
+    activePage: PropTypes.number,
+    pageCount: PropTypes.number
   },
 
   getInitialState() {
@@ -60,10 +62,10 @@ var DefaultViewPageIndicator = React.createClass({
   },
 
   renderIndicator(page) {
-    //var isTabActive = this.props.activePage === page;
+    var isTabActive = this.props.activePage === page;
     return (
       <TouchableOpacity style={styles.tab} key={'idc_' + page} onPress={() => this.props.goToPage(page)}>
-        <View style={styles.dot} />
+        <View style= {isTabActive ? styles.curDot : styles.dot} />
       </TouchableOpacity>
     );
   },
@@ -85,18 +87,8 @@ var DefaultViewPageIndicator = React.createClass({
     }
 
     return (
-      <View style={styles.tabs}
-        onLayout={(event) => {
-            var viewWidth = event.nativeEvent.layout.width;
-            if (!viewWidth || this.state.viewWidth === viewWidth) {
-              return;
-            }
-            this.setState({
-              viewWidth: viewWidth,
-            });
-          }}>
+      <View style={styles.tabs}>
         {indicators}
-        <Animated.View style={[styles.curDot, {left}]} />
       </View>
     );
   },

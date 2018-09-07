@@ -2,7 +2,7 @@
 
 var React = require('react');
 var PropTypes = require('prop-types');
-
+var createReactClass = require('create-react-class');
 var ReactNative = require('react-native');
 var {
   Dimensions,
@@ -11,7 +11,9 @@ var {
   TouchableOpacity,
   PanResponder,
   Animated,
+  Easing,
   StyleSheet,
+  Platform,
 } = ReactNative;
 
 var StaticRenderer = require('react-native/Libraries/Components/StaticRenderer');
@@ -20,8 +22,9 @@ var TimerMixin = require('react-timer-mixin');
 var DefaultViewPageIndicator = require('./DefaultViewPageIndicator');
 var deviceWidth = Dimensions.get('window').width;
 var ViewPagerDataSource = require('./ViewPagerDataSource');
+const platform = Platform.OS;
 
-var ViewPager = React.createClass({
+var ViewPager = createReactClass({
   mixins: [TimerMixin],
 
   statics: {
@@ -37,6 +40,7 @@ var ViewPager = React.createClass({
       PropTypes.func,
       PropTypes.bool
     ]),
+    skipOnClick: PropTypes.func,
     isLoop: PropTypes.bool,
     locked: PropTypes.bool,
     autoPlay: PropTypes.bool,
@@ -51,11 +55,10 @@ var ViewPager = React.createClass({
       isLoop: false,
       locked: false,
       animation: function(animate, toValue, gs) {
-        return Animated.spring(animate,
+        return Animated.timing(animate,
           {
             toValue: toValue,
-            friction: 10,
-            tension: 50,
+            duration: 1000,
           })
       },
     }
@@ -65,13 +68,13 @@ var ViewPager = React.createClass({
     return {
       currentPage: 0,
       viewWidth: 0,
-      scrollValue: new Animated.Value(0)
+      scrollValue: new Animated.Value(0),
+      showSkip:false
     };
   },
 
   componentWillMount() {
     this.childIndex = 0;
-
     var release = (e, gestureState) => {
       var relativeGestureDistance = gestureState.dx / deviceWidth,
           //lastPageIndex = this.props.children.length - 1,
@@ -85,7 +88,6 @@ var ViewPager = React.createClass({
       }
 
       this.props.hasTouch && this.props.hasTouch(false);
-
       this.movePage(step, gestureState);
     }
 
@@ -109,8 +111,12 @@ var ViewPager = React.createClass({
       // Dragging, move the view with the touch
       onPanResponderMove: (e, gestureState) => {
         var dx = gestureState.dx;
+        console.log(dx);
         var offsetX = -dx / this.state.viewWidth + this.childIndex;
         this.state.scrollValue.setValue(offsetX);
+        this.setTimeout( () => {
+         this.setShowSkip();
+      },1000);
       },
     });
 
@@ -130,6 +136,13 @@ var ViewPager = React.createClass({
     if (this.props.autoPlay) {
       this._startAutoPlay();
     }
+    this.setTimeout( () => {
+     this.setShowSkip();
+  },1000);
+  },
+
+  setShowSkip() {
+    this.setState({showSkip:true});
   },
 
   componentWillReceiveProps(nextProps) {
@@ -228,10 +241,22 @@ var ViewPager = React.createClass({
       return React.cloneElement(this.props.renderPageIndicator(), props);
     } else {
       return (
-        <View style={styles.indicators}>
-          <DefaultViewPageIndicator {...props} />
-        </View>
+          <View style={styles.indicators}>
+             <DefaultViewPageIndicator {...props} />
+             {this.state.showSkip?this.isSkipView():null}
+          </View>
       );
+    }
+  },
+
+  isSkipView(){
+    if(this.state.currentPage == 0 || this.state.currentPage ==1){
+      return (<TouchableOpacity style={styles.skipView} onPress={this.props.skipOnClick} hitSlop={{left:5,right:10,top:5,bottom:10}}>
+         <Text style={styles.skipTextStyle}>Skip</Text>
+       </TouchableOpacity>
+     );
+    }else{
+      return null;
     }
   },
 
@@ -300,6 +325,10 @@ var ViewPager = React.createClass({
       inputRange: [0, 1], outputRange: [0, -viewWidth]
     });
 
+    var translateY = this.state.scrollValue.interpolate({
+      inputRange: [0,1], outputRange: [0.5,1]
+    });
+
     return (
       <View style={{flex: 1}}
         onLayout={(event) => {
@@ -312,8 +341,7 @@ var ViewPager = React.createClass({
               currentPage: this.state.currentPage,
               viewWidth: viewWidth,
             });
-          }}
-        >
+          }}>
 
         <Animated.View style={[sceneContainerStyle, {transform: [{translateX}]}]}
           {...this._panResponder.panHandlers}>
@@ -326,6 +354,7 @@ var ViewPager = React.createClass({
                             scrollValue: this.state.scrollValue,
                             scrollOffset: this.childIndex,
                           })}
+
       </View>
     );
   }
@@ -334,13 +363,24 @@ var ViewPager = React.createClass({
 var styles = StyleSheet.create({
   indicators: {
     flex: 1,
-    alignItems: 'center',
     position: 'absolute',
-    bottom: 10,
+    alignItems: 'center',
+    bottom: 50,
     left: 0,
     right: 0,
-    backgroundColor: 'transparent',
+    backgroundColor: 'transparent'
   },
+  skipView: {
+    flex: 1,
+    position: 'absolute',
+    right: 30,
+    bottom: 0,
+  },
+  skipTextStyle:{
+    color: 'white',
+    fontSize: platform === 'ios' ? 14 : 12,
+    fontWeight: 'bold',
+  }
 });
 
 module.exports = ViewPager;
